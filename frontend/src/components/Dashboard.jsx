@@ -1,67 +1,80 @@
-import React, { useState, useMemo } from 'react';
-import { Grid, Box } from '@mui/material';
+import React, { useState } from 'react';
+import { Row, Col } from 'react-bootstrap';
+import SummaryCards from './SummaryCards';
 import TransactionForm from './TransactionForm';
-import TransactionList from './TransactionList';
 import Filters from './Filters';
+import TransactionList from './TransactionList';
 import { useGetTransactionsQuery } from '../api/transactionApi';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const COLORS = ['#0088FE', '#FF8042', '#00C49F', '#FFBB28', '#AA336A'];
 
-export default function Dashboard(){
-  const [filters,setFilters]=useState({});
-  const params={};
-  if(filters.type) params.type=filters.type;
-  if(filters.category) params.category=filters.category;
-  if(filters.startDate) params.startDate=filters.startDate;
-  if(filters.endDate) params.endDate=filters.endDate;
+export default function Dashboard() {
+  const [filters, setFilters] = useState({});
 
-  const { data, isLoading, isFetching, error } = useGetTransactionsQuery(params);
-  const items = data?.items || [];
+  // Fetch all transactions for SummaryCards (ignore filters)
+  const { data: allData, isLoading: loadingAll } = useGetTransactionsQuery({});
+  const allItems = allData?.items || [];
 
-  const totals = useMemo(()=>{
-    let income=0, expense=0;
-    items.forEach(t=>t.type==='income'?income+=t.amount:expense+=t.amount);
-    return {income, expense};
-  },[items]);
+  // Fetch filtered transactions for Table & Pie chart
+  const { data: filteredData, isLoading: loadingFiltered, isError } = useGetTransactionsQuery(
+    Object.fromEntries(Object.entries(filters || {}).filter(([_, v]) => v))
+  );
+  const items = filteredData?.items || [];
 
-  const byCategory = useMemo(()=>{
-    const map={};
-    items.forEach(t=> map[t.category]=(map[t.category]||0)+t.amount );
-    return Object.entries(map).map(([name,value])=>({name,value}));
-  },[items]);
+  // Total Income / Expense / Available Balance (unfiltered)
+  const totalIncome = allItems.filter(t => t.type === 'income').reduce((a,b) => a+b.amount, 0);
+  const totalExpense = allItems.filter(t => t.type === 'expense').reduce((a,b) => a+b.amount, 0);
+  const availableBalance = totalIncome - totalExpense;
+
+  // Pie chart: Available income slice + expenses by category
+  const expenseByCategory = items.filter(t => t.type==='expense')
+    .reduce((acc, t) => { acc[t.category] = (acc[t.category] || 0) + t.amount; return acc; }, {});
+
+  let chartData = [];
+  if (availableBalance > 0) chartData.push({ name: 'Available', value: availableBalance });
+  chartData.push(...Object.entries(expenseByCategory).map(([name, value]) => ({ name, value })));
+
+  if (isError) return <div>Error loading transactions</div>;
 
   return (
-    <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <TransactionForm />
-          <Box mt={2}><Filters onChange={setFilters}/></Box>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <div style={{height:240}}>
+    <>
+      {/* SummaryCards always show total */}
+      <SummaryCards income={totalIncome} expense={totalExpense} />
+
+      <Row className="mt-3">
+        <Col md={6}>
+          <TransactionForm totalIncome={totalIncome} totalExpense={totalExpense} />
+          <Filters onChange={setFilters} />
+        </Col>
+        <Col md={6}>
+          <div style={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={byCategory} dataKey="value" nameKey="name" outerRadius={80} label>
-                  {byCategory.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={100}
+                  fill="#8884d8"
+                  label={({ name, percent }) => `${name}: ${(percent*100).toFixed(0)}%`}
+                  isAnimationActive={true}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
+                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <Box mt={2}>
-            <div style={{display:'flex', justifyContent:'space-between'}}>
-              <div>Income: ₹{totals.income.toFixed(2)}</div>
-              <div>Expense: ₹{totals.expense.toFixed(2)}</div>
-              <div>Balance: ₹{(totals.income - totals.expense).toFixed(2)}</div>
-            </div>
-            <div style={{opacity:isFetching?0.6:1, marginTop:8}}>
-              {isLoading? 'Loading...' : (error?'Failed to load': `${items.length} transactions`)}
-            </div>
-          </Box>
-        </Grid>
-        <Grid item xs={12}><TransactionList items={items}/></Grid>
-      </Grid>
-    </Box>
+        </Col>
+      </Row>
+
+      <div className="mt-3">
+        {loadingFiltered ? "Loading..." : <TransactionList items={items} />}
+      </div>
+    </>
   );
 }

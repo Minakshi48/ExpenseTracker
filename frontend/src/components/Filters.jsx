@@ -1,36 +1,97 @@
 import React, { useState } from 'react';
-import { Box, TextField, MenuItem, Button, Grid } from '@mui/material';
+import { Row, Col, Form, Button } from 'react-bootstrap';
+import { useTheme } from '@mui/material/styles';
 
-export default function Filters({onChange}){
-  const [filters,setFilters]=useState({type:'', category:'', startDate:'', endDate:''});
-  const update=(patch)=>{ const next={...filters,...patch}; setFilters(next); };
-  const apply=()=>onChange(filters);
-  const reset=()=>{ setFilters({type:'', category:'', startDate:'', endDate:''}); onChange({}); };
+export default function Filters({ onChange }) {
+  const theme = useTheme();
+  const initialFilter = { type:'', category:'', startDate:'', endDate:'' };
+  const [filter, setFilter] = useState(initialFilter);
+
+  const inputStyle = {
+    backgroundColor: theme.palette.background.default,
+    color: theme.palette.text.primary,
+    borderColor: theme.palette.divider
+  };
+
+  const handleInputChange = e => {
+    setFilter(f => ({ ...f, [e.target.name]: e.target.value }));
+  };
+
+  const handleApply = () => {
+    // Only send non-empty values to parent
+    onChange(Object.fromEntries(Object.entries(filter).filter(([_, v]) => v)));
+  };
+
+  const handleReset = () => {
+    setFilter(initialFilter);        // Reset form fields
+    onChange({});                    // Send empty object → backend gets no query params
+  };
 
   return (
-    <Box>
-      <Grid container spacing={1} alignItems="center">
-        <Grid item xs={12} sm={2}>
-          <TextField select label="Type" value={filters.type} onChange={(e)=>update({type:e.target.value})} fullWidth>
-            <MenuItem value=''>All</MenuItem>
-            <MenuItem value='income'>Income</MenuItem>
-            <MenuItem value='expense'>Expense</MenuItem>
-          </TextField>
-        </Grid>
-        <Grid item xs={12} sm={3}>
-          <TextField label="Category" value={filters.category} onChange={(e)=>update({category:e.target.value})} fullWidth/>
-        </Grid>
-        <Grid item xs={12} sm={2}>
-          <TextField type="date" label="From" InputLabelProps={{shrink:true}} value={filters.startDate} onChange={(e)=>update({startDate:e.target.value})} fullWidth/>
-        </Grid>
-        <Grid item xs={12} sm={2}>
-          <TextField type="date" label="To" InputLabelProps={{shrink:true}} value={filters.endDate} onChange={(e)=>update({endDate:e.target.value})} fullWidth/>
-        </Grid>
-        <Grid item xs={12} sm={3} sx={{display:'flex', gap:1}}>
-          <Button variant="contained" onClick={apply}>Apply</Button>
-          <Button variant="outlined" onClick={reset}>Reset</Button>
-        </Grid>
-      </Grid>
-    </Box>
+    <div className="card shadow-sm p-3 mb-3" style={{ backgroundColor: theme.palette.background.paper }}>
+      <Row className="mb-2">
+        <Col md={6}>
+          <Form.Label style={{ color: theme.palette.text.primary }}>Type</Form.Label>
+          <Form.Select
+            name="type"
+            value={filter.type}
+            onChange={handleInputChange}
+            style={inputStyle}
+          >
+            <option value="">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </Form.Select>
+        </Col>
+        <Col md={6}>
+          <Form.Label style={{ color: theme.palette.text.primary }}>Category</Form.Label>
+          <Form.Control
+            type="text"
+            name="category"
+            value={filter.category}
+            onChange={handleInputChange}
+            placeholder="Category"
+            style={inputStyle}
+          />
+        </Col>
+      </Row>
+      <Row className="mb-2">
+        <Col md={6}>
+          <Form.Label style={{ color: theme.palette.text.primary }}>Start Date</Form.Label>
+          <Form.Control
+            type="date"
+            name="startDate"
+            value={filter.startDate}
+            onChange={handleInputChange}
+            style={inputStyle}
+          />
+        </Col>
+        <Col md={6}>
+          <Form.Label style={{ color: theme.palette.text.primary }}>End Date</Form.Label>
+          <Form.Control
+            type="date"
+            name="endDate"
+            value={filter.endDate}
+            onChange={handleInputChange}
+            style={inputStyle}
+          />
+        </Col>
+      </Row>
+
+      <Row className="mt-2">
+        <Col>
+          <Button variant="primary" onClick={handleApply} className="me-2">
+            Apply
+          </Button>
+          <Button variant="secondary" onClick={handleReset}>
+            Reset
+          </Button>
+        </Col>
+      </Row>
+    </div>
   );
 }
+
+
+
+

@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useDeleteTransactionMutation } from '../api/transactionApi';
 
 export default function TransactionList({ items = [] }) {
   const [deleteTx] = useDeleteTransactionMutation();
-  const [deletingId, setDeletingId] = React.useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this transaction?')) return;
@@ -20,29 +20,35 @@ export default function TransactionList({ items = [] }) {
     }
   };
 
-  if (!items.length) return <Typography variant="body2">No transactions found</Typography>;
+  if (!items.length) return <Typography variant="body2" sx={{ color: 'text.primary' }}>No transactions found</Typography>;
 
   return (
-    <TableContainer>
+    <TableContainer className="card shadow-sm p-3" sx={{ bgcolor: 'background.paper' }}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Date</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Category</TableCell>
-            <TableCell>Description</TableCell>
-            <TableCell align="right">Amount</TableCell>
-            <TableCell>Action</TableCell>
+            <TableCell sx={{ color: 'text.primary' }}>Date</TableCell>
+            <TableCell sx={{ color: 'text.primary' }}>Type</TableCell>
+            <TableCell sx={{ color: 'text.primary' }}>Category</TableCell>
+            <TableCell sx={{ color: 'text.primary' }}>Description</TableCell>
+            <TableCell align="right" sx={{ color: 'text.primary' }}>Amount</TableCell>
+            <TableCell sx={{ color: 'text.primary' }}>Action</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {items.map(tx => (
-            <TableRow key={tx._id}>
-              <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
-              <TableCell>{tx.type}</TableCell>
-              <TableCell>{tx.category}</TableCell>
-              <TableCell>{tx.description}</TableCell>
-              <TableCell align="right">
+            <TableRow
+              key={tx._id}
+              sx={{
+                '&:hover': { backgroundColor: (theme) => theme.palette.action.hover },
+                cursor: 'pointer'
+              }}
+            >
+              <TableCell sx={{ color: 'text.primary' }}>{new Date(tx.date).toLocaleDateString()}</TableCell>
+              <TableCell sx={{ color: 'text.primary' }}>{tx.type}</TableCell>
+              <TableCell sx={{ color: 'text.primary' }}>{tx.category}</TableCell>
+              <TableCell sx={{ color: 'text.primary' }}>{tx.description}</TableCell>
+              <TableCell align="right" sx={{ color: 'text.primary' }}>
                 {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount)}
               </TableCell>
               <TableCell>
